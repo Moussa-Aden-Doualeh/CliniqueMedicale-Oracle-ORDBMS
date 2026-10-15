@@ -1,0 +1,10 @@
+# Dossiers de compilation (temporaires)
+build/
+dist/
+nbproject/private/
+
+# Fichiers temporaires système et Java
+*.class
+*.log
+*.DS_Store
+Thumbs.db
