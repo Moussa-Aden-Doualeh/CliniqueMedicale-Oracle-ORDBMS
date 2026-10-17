@@ -69,7 +69,7 @@ public class MainFrame extends JFrame {
         title.setForeground(Color.WHITE);
         banner.add(title, BorderLayout.WEST);
 
-        JLabel user = new JLabel("Session : " + DatabaseConnection.getSessionUser() + " (Privilège SYSDBA)");
+        JLabel user = new JLabel("User : " + DatabaseConnection.getSessionUser());
         user.setFont(new Font("Segoe UI", Font.ITALIC, 12));
         user.setForeground(Color.YELLOW);
         banner.add(user, BorderLayout.EAST);
@@ -107,7 +107,7 @@ public class MainFrame extends JFrame {
         btnNavDepartements  = creerBoutonMenu("Départements", "department.png");
         btnNavConsultations = creerBoutonMenu("Consultations", "consultation.png");
         btnNavFactures      = creerBoutonMenu("Factures", "invoice.png");
-        btnNavStats         = creerBoutonMenu("Analytics / Stats", "statistics.png");
+        btnNavStats         = creerBoutonMenu("Statistique", "statistics.png");
 
         btnNavPatients.addActionListener(e -> { cardLayout.show(pnlContentCards, "PATIENTS"); activerBoutonNav(btnNavPatients); patientView.charger(); });
         btnNavMedecins.addActionListener(e -> { cardLayout.show(pnlContentCards, "MEDECINS"); activerBoutonNav(btnNavMedecins); medecinView.charger(); });

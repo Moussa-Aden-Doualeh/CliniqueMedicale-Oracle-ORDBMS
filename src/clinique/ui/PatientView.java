@@ -11,9 +11,11 @@ import java.util.Vector;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
 public class PatientView extends JPanel {
 
+    private TableRowSorter<DefaultTableModel> sorterPatients;
     private final PatientDAO patientDAO = new PatientDAO();
     private final MedecinDAO medecinDAO = new MedecinDAO();
     private static final Color COLOR_BG = new Color(245, 247, 250);
@@ -29,6 +31,7 @@ public class PatientView extends JPanel {
         setBackground(COLOR_BG);
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
+        // 1. FORMULAIRE DE GAUCHE
         JPanel pnlForm = new JPanel(new GridLayout(10, 2, 5, 5));
         pnlForm.setBackground(Color.WHITE);
         pnlForm.setBorder(BorderFactory.createCompoundBorder(
@@ -52,31 +55,126 @@ public class PatientView extends JPanel {
         pnlForm.add(creerLabel("Nom :"));         pnlForm.add(txtPatNom);
         pnlForm.add(creerLabel("Date Naiss :"));  pnlForm.add(txtPatDateN);
         pnlForm.add(creerLabel("Sexe :"));        pnlForm.add(txtPatSexe);
-        pnlForm.add(creerLabel("Âge (PL/SQL) :"));pnlForm.add(txtPatAge);
-        pnlForm.add(creerLabel("Ville (TAD) :")); pnlForm.add(txtPatVille);
+        pnlForm.add(creerLabel("Âge :"));         pnlForm.add(txtPatAge);
+        pnlForm.add(creerLabel("Ville :"));       pnlForm.add(txtPatVille);
         pnlForm.add(creerLabel("Code Postal :")); pnlForm.add(txtPatCP);
-        pnlForm.add(creerLabel("Phones (VARRAY):"));pnlForm.add(comboPatTels);
-        pnlForm.add(creerLabel("Médecin (REF) :"));pnlForm.add(txtPatMedecin);
+        pnlForm.add(creerLabel("Phones :"));      pnlForm.add(comboPatTels);
+        pnlForm.add(creerLabel("Médecin :"));     pnlForm.add(txtPatMedecin);
 
         add(pnlForm, BorderLayout.WEST);
 
-        // Tableau Droite + Actions
+        // 2. PANNEAU DE DROITE
         JPanel pnlTable = new JPanel(new BorderLayout(5, 5));
         pnlTable.setOpaque(false);
 
-        modelPatients = new DefaultTableModel(new String[]{"ID", "Nom", "Sexe", "Âge", "Ville", "Médecin (REF)"}, 0) {
+        // Modèle et tableau
+        modelPatients = new DefaultTableModel(new String[]{"ID", "Nom", "Sexe", "Âge", "Ville", "Médecin traitant"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblPatients = new JTable(modelPatients);
         tblPatients.setRowHeight(24);
+
+        // Activation du Sorter pour la recherche en temps réel
+        sorterPatients = new TableRowSorter<>(modelPatients);
+        tblPatients.setRowSorter(sorterPatients);
+
+        // Écouteur de sélection sécurisé avec convertRowIndexToModel
         tblPatients.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && tblPatients.getSelectedRow() != -1) {
-                int idPat = (int) modelPatients.getValueAt(tblPatients.getSelectedRow(), 0);
+                int r = tblPatients.convertRowIndexToModel(tblPatients.getSelectedRow());
+                int idPat = (int) modelPatients.getValueAt(r, 0);
                 remplirFiche(idPat);
             }
         });
+
+        // EN-TÊTE PROFESSIONNEL AVEC CAPSULE DE RECHERCHE
+        JPanel pnlTableTop = new JPanel(new BorderLayout(10, 5));
+        pnlTableTop.setOpaque(false);
+        pnlTableTop.setBorder(new EmptyBorder(0, 0, 6, 0));
+
+        JLabel lblTitreTable = new JLabel("Dossier Patients (Table Typée OID)");
+        lblTitreTable.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTitreTable.setForeground(new Color(30, 41, 59));
+        pnlTableTop.add(lblTitreTable, BorderLayout.WEST);
+
+        // Capsule
+        JPanel pnlSearchBox = new JPanel(new BorderLayout(8, 0));
+        pnlSearchBox.setBackground(Color.WHITE);
+        pnlSearchBox.setPreferredSize(new Dimension(230, 28));
+        pnlSearchBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
+            new EmptyBorder(2, 8, 2, 6)
+        ));
+
+        JLabel lblIconSearch = new JLabel();
+        ImageIcon iconSearch = chargerIcone("search.png", 14, 14);
+        if (iconSearch != null) lblIconSearch.setIcon(iconSearch); else lblIconSearch.setText("🔍");
+        pnlSearchBox.add(lblIconSearch, BorderLayout.WEST);
+
+        String placeholder = "Filtrer nom, ville, médecin...";
+        JTextField txtSearch = new JTextField(placeholder);
+        txtSearch.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        txtSearch.setForeground(new Color(148, 163, 184));
+        txtSearch.setBorder(null);
+        txtSearch.setOpaque(false);
+        pnlSearchBox.add(txtSearch, BorderLayout.CENTER);
+
+        JLabel btnClear = new JLabel("", SwingConstants.CENTER);
+        ImageIcon iconClear = chargerIcone("clear.png", 12, 12);
+        if (iconClear != null) btnClear.setIcon(iconClear); else btnClear.setText("✕");
+        btnClear.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnClear.setVisible(false);
+        pnlSearchBox.add(btnClear, BorderLayout.EAST);
+
+        // Gestion du Placeholder et du Filtrage
+        txtSearch.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (txtSearch.getText().equals(placeholder)) {
+                    txtSearch.setText("");
+                    txtSearch.setForeground(new Color(30, 41, 59));
+                }
+            }
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (txtSearch.getText().trim().isEmpty()) {
+                    txtSearch.setText(placeholder);
+                    txtSearch.setForeground(new Color(148, 163, 184));
+                    sorterPatients.setRowFilter(null);
+                    btnClear.setVisible(false);
+                }
+            }
+        });
+
+        txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                String q = txtSearch.getText().trim();
+                if (q.isEmpty() || q.equals(placeholder)) {
+                    sorterPatients.setRowFilter(null);
+                    btnClear.setVisible(false);
+                } else {
+                    btnClear.setVisible(true);
+                    sorterPatients.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(q)));
+                }
+            }
+        });
+
+        btnClear.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                txtSearch.setText("");
+                sorterPatients.setRowFilter(null);
+                btnClear.setVisible(false);
+                txtSearch.requestFocus();
+            }
+        });
+
+        pnlTableTop.add(pnlSearchBox, BorderLayout.EAST);
+        pnlTable.add(pnlTableTop, BorderLayout.NORTH);
         pnlTable.add(new JScrollPane(tblPatients), BorderLayout.CENTER);
 
+        // Barre d'actions CRUD en bas
         JPanel pnlActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 5));
         pnlActions.setOpaque(false);
 
@@ -84,7 +182,7 @@ public class PatientView extends JPanel {
         JButton btnMod = creerBouton(" Modifier", new Color(41, 128, 185), "edit.png");
         JButton btnDel = creerBouton(" Supprimer", new Color(192, 57, 43), "delete.png");
         JButton btnAct = creerBouton(" Actualiser", new Color(100, 116, 139), "refresh.png");
-        
+
         btnAdd.addActionListener(e -> dialogueAjouter());
         btnMod.addActionListener(e -> dialogueModifier());
         btnDel.addActionListener(e -> actionSupprimer());
@@ -136,108 +234,526 @@ public class PatientView extends JPanel {
         } catch (SQLException ignored) {}
     }
 
+    // BOÎTE DE DIALOGUE : AJOUTER UN PATIENT 
     private void dialogueAjouter() {
-        JTextField id = new JTextField(String.valueOf(System.currentTimeMillis() % 10000));
-        JTextField nom = new JTextField();
-        JTextField dateN = new JTextField("15/04/1998");
-        JComboBox<String> comboSexe = new JComboBox<>(new String[]{"M", "F"});
-        JTextField rue = new JTextField("Avenue Habib Bourguiba");
-        JTextField ville = new JTextField("Tunis");
-        JTextField cp = new JTextField("1001");
-        JTextField tel1 = new JTextField("98111222");
-        JTextField tel2 = new JTextField("55444333");
-        JComboBox<ComboItem> comboMeds = new JComboBox<>();
+        int prochainId = 1001;
+        try {
+            prochainId = patientDAO.getNextId();
+        } catch (Exception ignored) {}
 
+        JTextField txtId = new JTextField(String.valueOf(prochainId));
+        txtId.setEditable(false);
+        txtId.setBackground(new Color(245, 245, 245));
+        txtId.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+        JTextField txtNom = new JTextField();
+
+        // Sélecteur Jour / Mois / Année
+        String[] jours = new String[31];
+        for (int i = 1; i <= 31; i++) jours[i - 1] = String.format("%02d", i);
+        JComboBox<String> cbJour = new JComboBox<>(jours);
+
+        String[] mois = {
+            "01 - Janvier", "02 - Février", "03 - Mars", "04 - Avril", "05 - Mai", "06 - Juin",
+            "07 - Juillet", "08 - Août", "09 - Septembre", "10 - Octobre", "11 - Novembre", "12 - Décembre"
+        };
+        JComboBox<String> cbMois = new JComboBox<>(mois);
+
+        int anneeActuelle = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        String[] annees = new String[anneeActuelle - 1930 + 1];
+        for (int a = anneeActuelle, idx = 0; a >= 1930; a--, idx++) {
+            annees[idx] = String.valueOf(a);
+        }
+        JComboBox<String> cbAnnee = new JComboBox<>(annees);
+        cbAnnee.setSelectedItem("1998");
+
+        JPanel pnlDate = new JPanel(new GridLayout(1, 3, 5, 0));
+        pnlDate.setOpaque(false);
+        pnlDate.add(cbJour);
+        pnlDate.add(cbMois);
+        pnlDate.add(cbAnnee);
+
+        JComboBox<String> comboSexe = new JComboBox<>(new String[]{"Masculin", "Féminin"});
+
+        JTextField txtRue = new JTextField();
+        String[] villesTunisie = {
+            "Tunis", "Ariana", "Ben Arous", "Manouba", "Sousse",
+            "Sfax", "Bizerte", "Nabeul", "Monastir", "Kairouan", "Gabès", "Médenine"
+        };
+        JComboBox<String> comboVille = new JComboBox<>(villesTunisie);
+        JTextField txtCP = new JTextField("1001");
+        txtCP.setEditable(false);
+        txtCP.setBackground(new Color(245, 245, 245));
+
+        comboVille.addActionListener(e -> {
+            String v = (String) comboVille.getSelectedItem();
+            switch (v) {
+                case "Tunis":      txtCP.setText("1001"); break;
+                case "Ariana":     txtCP.setText("2080"); break;
+                case "Ben Arous":  txtCP.setText("2013"); break;
+                case "Manouba":    txtCP.setText("2010"); break;
+                case "Sousse":     txtCP.setText("4000"); break;
+                case "Sfax":       txtCP.setText("3000"); break;
+                case "Bizerte":    txtCP.setText("7000"); break;
+                case "Nabeul":     txtCP.setText("8000"); break;
+                case "Monastir":   txtCP.setText("5000"); break;
+                case "Kairouan":   txtCP.setText("3100"); break;
+                case "Gabès":      txtCP.setText("6000"); break;
+                case "Médenine":   txtCP.setText("4100"); break;
+                default:           txtCP.setText("1000"); break;
+            }
+        });
+
+        JComboBox<ComboItem> comboMeds = new JComboBox<>();
         try {
             for (ComboItem it : medecinDAO.getComboItems()) comboMeds.addItem(it);
         } catch (SQLException ignored) {}
 
-        Object[] fields = {
-            "ID :", id, "Nom & Prénom :", nom, "Date Naissance :", dateN, "Sexe :", comboSexe,
-            "-- TAD ADRESSE_T --", new JSeparator(),
-            "Rue :", rue, "Ville :", ville, "Code Postal :", cp,
-            "-- VARRAY (Max 3) --", new JSeparator(),
-            "Téléphone 1 :", tel1, "Téléphone 2 :", tel2,
-            "-- MÉDECIN (REF) --", new JSeparator(),
-            "Médecin Traitant :", comboMeds
-        };
+        // Téléphones
+        JTextField txtTel1 = new JTextField();
+        JTextField txtTel2 = new JTextField();
+        JTextField txtTel3 = new JTextField();
 
-        if (JOptionPane.showConfirmDialog(this, fields, "Nouveau Patient (TAD + VARRAY + REF)", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+        JLabel lblTel2 = new JLabel("Téléphone 2 (Urgence) :");
+        lblTel2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblTel2.setForeground(COLOR_TEXT_LABEL);
+        lblTel2.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblTel2.setVisible(false);
+        txtTel2.setVisible(false);
+
+        JLabel lblTel3 = new JLabel("Téléphone 3 (Proche) :");
+        lblTel3.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblTel3.setForeground(COLOR_TEXT_LABEL);
+        lblTel3.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblTel3.setVisible(false);
+        txtTel3.setVisible(false);
+
+        JButton btnPlusTel = new JButton("+ Ajouter");
+        btnPlusTel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnPlusTel.setBackground(new Color(39, 174, 96));
+        btnPlusTel.setForeground(Color.WHITE);
+        btnPlusTel.setFocusPainted(false);
+
+        JButton btnMoinsTel = new JButton("- Retirer");
+        btnMoinsTel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnMoinsTel.setBackground(new Color(192, 57, 43));
+        btnMoinsTel.setForeground(Color.WHITE);
+        btnMoinsTel.setFocusPainted(false);
+        btnMoinsTel.setEnabled(false);
+
+        JPanel pnlBoutonsTels = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        pnlBoutonsTels.setOpaque(false);
+        pnlBoutonsTels.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlBoutonsTels.add(btnPlusTel);
+        pnlBoutonsTels.add(btnMoinsTel);
+
+        JPanel mainForm = new JPanel();
+        mainForm.setLayout(new BoxLayout(mainForm, BoxLayout.Y_AXIS));
+        mainForm.setPreferredSize(new Dimension(360, 500));
+
+        btnPlusTel.addActionListener(e -> {
+            if (!txtTel2.isVisible()) {
+                lblTel2.setVisible(true);
+                txtTel2.setVisible(true);
+                btnMoinsTel.setEnabled(true);
+            } else if (!txtTel3.isVisible()) {
+                lblTel3.setVisible(true);
+                txtTel3.setVisible(true);
+                btnPlusTel.setEnabled(false);
+            }
+            Window w = SwingUtilities.getWindowAncestor(mainForm);
+            if (w != null) w.pack();
+        });
+
+        btnMoinsTel.addActionListener(e -> {
+            if (txtTel3.isVisible()) {
+                txtTel3.setText("");
+                lblTel3.setVisible(false);
+                txtTel3.setVisible(false);
+                btnPlusTel.setEnabled(true);
+            } else if (txtTel2.isVisible()) {
+                txtTel2.setText("");
+                lblTel2.setVisible(false);
+                txtTel2.setVisible(false);
+                btnMoinsTel.setEnabled(false);
+            }
+            Window w = SwingUtilities.getWindowAncestor(mainForm);
+            if (w != null) w.pack();
+        });
+
+        JLabel sec1 = new JLabel("ADRESSE");
+        sec1.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        sec1.setForeground(new Color(100, 116, 139));
+
+        JLabel sec2 = new JLabel("COLLECTION TÉLÉPHONES (1 à 3 Max)");
+        sec2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        sec2.setForeground(new Color(100, 116, 139));
+
+        JLabel sec3 = new JLabel("MÉDECIN TRAITANT");
+        sec3.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        sec3.setForeground(new Color(100, 116, 139));
+
+        ajouterComposant(mainForm, creerLabelForm("ID Patient :"));
+        ajouterComposant(mainForm, txtId);
+        mainForm.add(Box.createVerticalStrut(5));
+
+        ajouterComposant(mainForm, creerLabelForm("Nom & Prénom du Patient :"));
+        ajouterComposant(mainForm, txtNom);
+        mainForm.add(Box.createVerticalStrut(5));
+
+        ajouterComposant(mainForm, creerLabelForm("Date de Naissance :"));
+        ajouterComposant(mainForm, pnlDate);
+        mainForm.add(Box.createVerticalStrut(5));
+
+        ajouterComposant(mainForm, creerLabelForm("Sexe :"));
+        ajouterComposant(mainForm, comboSexe);
+        mainForm.add(Box.createVerticalStrut(10));
+
+        ajouterComposant(mainForm, sec1);
+        ajouterComposant(mainForm, new JSeparator());
+        ajouterComposant(mainForm, creerLabelForm("Rue :"));
+        ajouterComposant(mainForm, txtRue);
+        ajouterComposant(mainForm, creerLabelForm("Ville :"));
+        ajouterComposant(mainForm, comboVille);
+        ajouterComposant(mainForm, creerLabelForm("Code Postal :"));
+        ajouterComposant(mainForm, txtCP);
+        mainForm.add(Box.createVerticalStrut(10));
+
+        ajouterComposant(mainForm, sec2);
+        ajouterComposant(mainForm, new JSeparator());
+        ajouterComposant(mainForm, creerLabelForm("Téléphone 1 (Principal) :"));
+        ajouterComposant(mainForm, txtTel1);
+        ajouterComposant(mainForm, lblTel2);
+        ajouterComposant(mainForm, txtTel2);
+        ajouterComposant(mainForm, lblTel3);
+        ajouterComposant(mainForm, txtTel3);
+        mainForm.add(Box.createVerticalStrut(4));
+        ajouterComposant(mainForm, pnlBoutonsTels);
+        mainForm.add(Box.createVerticalStrut(10));
+
+        ajouterComposant(mainForm, sec3);
+        ajouterComposant(mainForm, new JSeparator());
+        ajouterComposant(mainForm, comboMeds);
+
+        if (JOptionPane.showConfirmDialog(this, mainForm, "Nouveau Patient", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            if (txtNom.getText().trim().isEmpty() || txtTel1.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Veuillez renseigner au moins le Nom et le Téléphone principal !", "Champs obligatoires", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             try {
-                Vector<String> tels = new Vector<>();
-                if (!tel1.getText().trim().isEmpty()) tels.add("'" + tel1.getText().trim() + "'");
-                if (!tel2.getText().trim().isEmpty()) tels.add("'" + tel2.getText().trim() + "'");
-                String varraySql = "telephones_va(" + String.join(", ", tels) + ")";
+                String moisNumero = cbMois.getSelectedItem().toString().substring(0, 2);
+                String dateFinale = cbJour.getSelectedItem() + "/" + moisNumero + "/" + cbAnnee.getSelectedItem();
 
+                Vector<String> tels = new Vector<>();
+                tels.add("'" + txtTel1.getText().trim() + "'");
+                if (txtTel2.isVisible() && !txtTel2.getText().trim().isEmpty()) {
+                    tels.add("'" + txtTel2.getText().trim() + "'");
+                }
+                if (txtTel3.isVisible() && !txtTel3.getText().trim().isEmpty()) {
+                    tels.add("'" + txtTel3.getText().trim() + "'");
+                }
+                String varraySql = "telephones_va(" + String.join(", ", tels) + ")";
+                String sexeChoisi = comboSexe.getSelectedItem().toString().substring(0, 1);
                 ComboItem med = (ComboItem) comboMeds.getSelectedItem();
 
-                patientDAO.ajouter(Integer.parseInt(id.getText().trim()), nom.getText().trim(), dateN.getText().trim(),
-                        comboSexe.getSelectedItem().toString(), rue.getText().trim(), ville.getText().trim(),
-                        Integer.parseInt(cp.getText().trim()), varraySql, med.getId());
+                patientDAO.ajouter(
+                    Integer.parseInt(txtId.getText().trim()),
+                    txtNom.getText().trim(),
+                    dateFinale,
+                    sexeChoisi,
+                    txtRue.getText().trim(),
+                    comboVille.getSelectedItem().toString(),
+                    Integer.parseInt(txtCP.getText().trim()),
+                    varraySql,
+                    med.getId()
+                );
 
-                JOptionPane.showMessageDialog(this, "Patient créé avec Nested Table vide par défaut !");
+                JOptionPane.showMessageDialog(this, "Patient créé avec succès !", "Succès", JOptionPane.INFORMATION_MESSAGE);
                 charger();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erreur : " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Erreur d'insertion : " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
+    // BOÎTE DE DIALOGUE : MODIFIER UN PATIENT
     private void dialogueModifier() {
-        int r = tblPatients.getSelectedRow();
-        if (r == -1) { JOptionPane.showMessageDialog(this, "Sélectionnez un patient !"); return; }
+        int viewRow = tblPatients.getSelectedRow();
+        if (viewRow == -1) { 
+            JOptionPane.showMessageDialog(this, "Veuillez d'abord sélectionner un patient dans le tableau !"); 
+            return; 
+        }
+        int r = tblPatients.convertRowIndexToModel(viewRow);
         int id = (int) modelPatients.getValueAt(r, 0);
 
         try {
             Patient p = patientDAO.getFicheComplete(id);
             if (p == null) return;
 
-            JTextField nom = new JTextField(p.getNomPat());
-            JTextField dateN = new JTextField(p.getDateNaissance());
-            JComboBox<String> comboSexe = new JComboBox<>(new String[]{"M", "F"});
-            comboSexe.setSelectedItem(p.getSexe());
-            JTextField rue = new JTextField(p.getRue());
-            JTextField ville = new JTextField(p.getVille());
-            JTextField cp = new JTextField(String.valueOf(p.getCodePostal()));
-            JTextField tel1 = new JTextField(p.getTels().size() > 0 ? p.getTels().get(0) : "");
-            JTextField tel2 = new JTextField(p.getTels().size() > 1 ? p.getTels().get(1) : "");
-            JComboBox<ComboItem> comboMeds = new JComboBox<>();
-            for (ComboItem it : medecinDAO.getComboItems()) comboMeds.addItem(it);
+            JTextField txtId = new JTextField(String.valueOf(id));
+            txtId.setEditable(false);
+            txtId.setBackground(new Color(245, 245, 245));
+            txtId.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-            Object[] fields = {
-                "ID : " + id, "Nom :", nom, "Date Naissance :", dateN, "Sexe :", comboSexe,
-                "-- TAD ADRESSE_T --", new JSeparator(),
-                "Rue :", rue, "Ville :", ville, "Code Postal :", cp,
-                "-- VARRAY --", new JSeparator(),
-                "Téléphone 1 :", tel1, "Téléphone 2 :", tel2,
-                "-- MÉDECIN (REF) --", new JSeparator(),
-                "Médecin Traitant :", comboMeds
+            JTextField txtNom = new JTextField(p.getNomPat());
+
+            String[] jours = new String[31];
+            for (int i = 1; i <= 31; i++) jours[i - 1] = String.format("%02d", i);
+            JComboBox<String> cbJour = new JComboBox<>(jours);
+
+            String[] mois = {
+                "01 - Janvier", "02 - Février", "03 - Mars", "04 - Avril", "05 - Mai", "06 - Juin",
+                "07 - Juillet", "08 - Août", "09 - Septembre", "10 - Octobre", "11 - Novembre", "12 - Décembre"
             };
+            JComboBox<String> cbMois = new JComboBox<>(mois);
 
-            if (JOptionPane.showConfirmDialog(this, fields, "Modifier Patient", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            int anneeActuelle = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+            String[] annees = new String[anneeActuelle - 1930 + 1];
+            for (int a = anneeActuelle, idx = 0; a >= 1930; a--, idx++) {
+                annees[idx] = String.valueOf(a);
+            }
+            JComboBox<String> cbAnnee = new JComboBox<>(annees);
+
+            try {
+                String[] partsDate = p.getDateNaissance().split("/");
+                if (partsDate.length == 3) {
+                    cbJour.setSelectedItem(partsDate[0]);
+                    int moisIdx = Integer.parseInt(partsDate[1]) - 1;
+                    if (moisIdx >= 0 && moisIdx < 12) cbMois.setSelectedIndex(moisIdx);
+                    cbAnnee.setSelectedItem(partsDate[2]);
+                }
+            } catch (Exception ignored) {}
+
+            JPanel pnlDate = new JPanel(new GridLayout(1, 3, 5, 0));
+            pnlDate.setOpaque(false);
+            pnlDate.add(cbJour);
+            pnlDate.add(cbMois);
+            pnlDate.add(cbAnnee);
+
+            JComboBox<String> comboSexe = new JComboBox<>(new String[]{"Masculin", "Féminin"});
+            if (p.getSexe() != null && p.getSexe().equalsIgnoreCase("F")) {
+                comboSexe.setSelectedIndex(1);
+            } else {
+                comboSexe.setSelectedIndex(0);
+            }
+
+            JTextField txtRue = new JTextField(p.getRue() != null ? p.getRue() : "");
+            String[] villesTunisie = {
+                "Tunis", "Ariana", "Ben Arous", "Manouba", "Sousse",
+                "Sfax", "Bizerte", "Nabeul", "Monastir", "Kairouan", "Gabès", "Médenine"
+            };
+            JComboBox<String> comboVille = new JComboBox<>(villesTunisie);
+            comboVille.setSelectedItem(p.getVille());
+
+            JTextField txtCP = new JTextField(String.valueOf(p.getCodePostal()));
+            txtCP.setEditable(false);
+            txtCP.setBackground(new Color(245, 245, 245));
+
+            comboVille.addActionListener(e -> {
+                String v = (String) comboVille.getSelectedItem();
+                switch (v) {
+                    case "Tunis":      txtCP.setText("1001"); break;
+                    case "Ariana":     txtCP.setText("2080"); break;
+                    case "Ben Arous":  txtCP.setText("2013"); break;
+                    case "Manouba":    txtCP.setText("2010"); break;
+                    case "Sousse":     txtCP.setText("4000"); break;
+                    case "Sfax":       txtCP.setText("3000"); break;
+                    case "Bizerte":    txtCP.setText("7000"); break;
+                    case "Nabeul":     txtCP.setText("8000"); break;
+                    case "Monastir":   txtCP.setText("5000"); break;
+                    case "Kairouan":   txtCP.setText("3100"); break;
+                    case "Gabès":      txtCP.setText("6000"); break;
+                    case "Médenine":   txtCP.setText("4100"); break;
+                    default:           txtCP.setText("1000"); break;
+                }
+            });
+
+            JComboBox<ComboItem> comboMeds = new JComboBox<>();
+            for (ComboItem it : medecinDAO.getComboItems()) {
+                comboMeds.addItem(it);
+                if (it.getLabel().contains(p.getNomMedecin())) {
+                    comboMeds.setSelectedItem(it);
+                }
+            }
+
+            List<String> telsExistants = p.getTels();
+            JTextField txtTel1 = new JTextField(telsExistants.size() > 0 ? telsExistants.get(0) : "");
+            JTextField txtTel2 = new JTextField(telsExistants.size() > 1 ? telsExistants.get(1) : "");
+            JTextField txtTel3 = new JTextField(telsExistants.size() > 2 ? telsExistants.get(2) : "");
+
+            JLabel lblTel2 = new JLabel("Téléphone 2 (Urgence) :");
+            lblTel2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            lblTel2.setForeground(COLOR_TEXT_LABEL);
+            lblTel2.setAlignmentX(Component.LEFT_ALIGNMENT);
+            lblTel2.setVisible(telsExistants.size() > 1);
+            txtTel2.setVisible(telsExistants.size() > 1);
+
+            JLabel lblTel3 = new JLabel("Téléphone 3 (Proche) :");
+            lblTel3.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            lblTel3.setForeground(COLOR_TEXT_LABEL);
+            lblTel3.setAlignmentX(Component.LEFT_ALIGNMENT);
+            lblTel3.setVisible(telsExistants.size() > 2);
+            txtTel3.setVisible(telsExistants.size() > 2);
+
+            JButton btnPlusTel = new JButton("+ Ajouter");
+            btnPlusTel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            btnPlusTel.setBackground(new Color(39, 174, 96));
+            btnPlusTel.setForeground(Color.WHITE);
+            btnPlusTel.setFocusPainted(false);
+            btnPlusTel.setEnabled(telsExistants.size() < 3);
+
+            JButton btnMoinsTel = new JButton("- Retirer");
+            btnMoinsTel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            btnMoinsTel.setBackground(new Color(192, 57, 43));
+            btnMoinsTel.setForeground(Color.WHITE);
+            btnMoinsTel.setFocusPainted(false);
+            btnMoinsTel.setEnabled(telsExistants.size() > 1);
+
+            JPanel pnlBoutonsTels = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+            pnlBoutonsTels.setOpaque(false);
+            pnlBoutonsTels.setAlignmentX(Component.LEFT_ALIGNMENT);
+            pnlBoutonsTels.add(btnPlusTel);
+            pnlBoutonsTels.add(btnMoinsTel);
+
+            JPanel mainForm = new JPanel();
+            mainForm.setLayout(new BoxLayout(mainForm, BoxLayout.Y_AXIS));
+            mainForm.setPreferredSize(new Dimension(360, 500));
+
+            btnPlusTel.addActionListener(e -> {
+                if (!txtTel2.isVisible()) {
+                    lblTel2.setVisible(true);
+                    txtTel2.setVisible(true);
+                    btnMoinsTel.setEnabled(true);
+                } else if (!txtTel3.isVisible()) {
+                    lblTel3.setVisible(true);
+                    txtTel3.setVisible(true);
+                    btnPlusTel.setEnabled(false);
+                }
+                Window w = SwingUtilities.getWindowAncestor(mainForm);
+                if (w != null) w.pack();
+            });
+
+            btnMoinsTel.addActionListener(e -> {
+                if (txtTel3.isVisible()) {
+                    txtTel3.setText("");
+                    lblTel3.setVisible(false);
+                    txtTel3.setVisible(false);
+                    btnPlusTel.setEnabled(true);
+                } else if (txtTel2.isVisible()) {
+                    txtTel2.setText("");
+                    lblTel2.setVisible(false);
+                    txtTel2.setVisible(false);
+                    btnMoinsTel.setEnabled(false);
+                }
+                Window w = SwingUtilities.getWindowAncestor(mainForm);
+                if (w != null) w.pack();
+            });
+
+            JLabel sec1 = new JLabel("ADRESSE");
+            sec1.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            sec1.setForeground(new Color(100, 116, 139));
+
+            JLabel sec2 = new JLabel("COLLECTION TÉLÉPHONES (1 à 3 Max)");
+            sec2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            sec2.setForeground(new Color(100, 116, 139));
+
+            JLabel sec3 = new JLabel("MÉDECIN TRAITANT");
+            sec3.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            sec3.setForeground(new Color(100, 116, 139));
+
+            ajouterComposant(mainForm, creerLabelForm("ID Patient (Non modifiable) :"));
+            ajouterComposant(mainForm, txtId);
+            mainForm.add(Box.createVerticalStrut(5));
+
+            ajouterComposant(mainForm, creerLabelForm("Nom & Prénom du Patient :"));
+            ajouterComposant(mainForm, txtNom);
+            mainForm.add(Box.createVerticalStrut(5));
+
+            ajouterComposant(mainForm, creerLabelForm("Date de Naissance :"));
+            ajouterComposant(mainForm, pnlDate);
+            mainForm.add(Box.createVerticalStrut(5));
+
+            ajouterComposant(mainForm, creerLabelForm("Sexe :"));
+            ajouterComposant(mainForm, comboSexe);
+            mainForm.add(Box.createVerticalStrut(10));
+
+            ajouterComposant(mainForm, sec1);
+            ajouterComposant(mainForm, new JSeparator());
+            ajouterComposant(mainForm, creerLabelForm("Rue :"));
+            ajouterComposant(mainForm, txtRue);
+            ajouterComposant(mainForm, creerLabelForm("Ville :"));
+            ajouterComposant(mainForm, comboVille);
+            ajouterComposant(mainForm, creerLabelForm("Code Postal :"));
+            ajouterComposant(mainForm, txtCP);
+            mainForm.add(Box.createVerticalStrut(10));
+
+            ajouterComposant(mainForm, sec2);
+            ajouterComposant(mainForm, new JSeparator());
+            ajouterComposant(mainForm, creerLabelForm("Téléphone 1 (Principal) :"));
+            ajouterComposant(mainForm, txtTel1);
+            ajouterComposant(mainForm, lblTel2);
+            ajouterComposant(mainForm, txtTel2);
+            ajouterComposant(mainForm, lblTel3);
+            ajouterComposant(mainForm, txtTel3);
+            mainForm.add(Box.createVerticalStrut(4));
+            ajouterComposant(mainForm, pnlBoutonsTels);
+            mainForm.add(Box.createVerticalStrut(10));
+
+            ajouterComposant(mainForm, sec3);
+            ajouterComposant(mainForm, new JSeparator());
+            ajouterComposant(mainForm, comboMeds);
+
+            if (JOptionPane.showConfirmDialog(this, mainForm, "Modifier Patient (ID: " + id + ")", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+                if (txtNom.getText().trim().isEmpty() || txtTel1.getText().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Veuillez renseigner au moins le Nom et le Téléphone principal !", "Champs obligatoires", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String moisNumero = cbMois.getSelectedItem().toString().substring(0, 2);
+                String dateFinale = cbJour.getSelectedItem() + "/" + moisNumero + "/" + cbAnnee.getSelectedItem();
+
                 Vector<String> tels = new Vector<>();
-                if (!tel1.getText().trim().isEmpty()) tels.add("'" + tel1.getText().trim() + "'");
-                if (!tel2.getText().trim().isEmpty()) tels.add("'" + tel2.getText().trim() + "'");
+                tels.add("'" + txtTel1.getText().trim() + "'");
+                if (txtTel2.isVisible() && !txtTel2.getText().trim().isEmpty()) {
+                    tels.add("'" + txtTel2.getText().trim() + "'");
+                }
+                if (txtTel3.isVisible() && !txtTel3.getText().trim().isEmpty()) {
+                    tels.add("'" + txtTel3.getText().trim() + "'");
+                }
                 String varraySql = "telephones_va(" + String.join(", ", tels) + ")";
 
+                String sexeChoisi = comboSexe.getSelectedItem().toString().substring(0, 1);
                 ComboItem med = (ComboItem) comboMeds.getSelectedItem();
-                patientDAO.modifier(id, nom.getText().trim(), dateN.getText().trim(), comboSexe.getSelectedItem().toString(),
-                        rue.getText().trim(), ville.getText().trim(), Integer.parseInt(cp.getText().trim()), varraySql, med.getId());
 
-                JOptionPane.showMessageDialog(this, "Patient mis à jour avec son TAD et son VARRAY !");
+                patientDAO.modifier(
+                    id,
+                    txtNom.getText().trim(),
+                    dateFinale,
+                    sexeChoisi,
+                    txtRue.getText().trim(),
+                    comboVille.getSelectedItem().toString(),
+                    Integer.parseInt(txtCP.getText().trim()),
+                    varraySql,
+                    med.getId()
+                );
+
+                JOptionPane.showMessageDialog(this, "Patient mis à jour avec succès !", "Succès", JOptionPane.INFORMATION_MESSAGE);
                 charger();
             }
+
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erreur : " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Erreur de modification : " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void actionSupprimer() {
-        int r = tblPatients.getSelectedRow();
-        if (r == -1) { JOptionPane.showMessageDialog(this, "Sélectionnez un patient !"); return; }
+        int viewRow = tblPatients.getSelectedRow();
+        if (viewRow == -1) { JOptionPane.showMessageDialog(this, "Sélectionnez un patient !"); return; }
+        int r = tblPatients.convertRowIndexToModel(viewRow);
         int id = (int) modelPatients.getValueAt(r, 0);
 
-        if (JOptionPane.showConfirmDialog(this, "Supprimer le patient n° " + id + " ?\nAttention : Toute sa Nested Table de consultations sera détruite en cascade simultanément !", "Suppression en Cascade", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+        if (JOptionPane.showConfirmDialog(this, "Supprimer le patient n° " + id + " ?\nAttention : toutes les consultations associées à ce patient seront également supprimées définitivement !", "Confirmation de suppression", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
             try {
                 patientDAO.supprimer(id);
                 JOptionPane.showMessageDialog(this, "Patient et dossier médical détruits avec succès !");
@@ -248,12 +764,28 @@ public class PatientView extends JPanel {
         }
     }
 
+    private void ajouterComposant(JPanel panel, JComponent comp) {
+        comp.setAlignmentX(Component.LEFT_ALIGNMENT);
+        if (comp instanceof JTextField || comp instanceof JComboBox) {
+            comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        }
+        panel.add(comp);
+    }
+
     private JTextField creerChampLecture() {
         JTextField tf = new JTextField();
         tf.setEditable(false);
         tf.setBackground(new Color(245, 245, 245));
         tf.setFont(new Font("Segoe UI", Font.BOLD, 12));
         return tf;
+    }
+
+    private JLabel creerLabelForm(String text) {
+        JLabel l = new JLabel(text, SwingConstants.LEFT);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setForeground(COLOR_TEXT_LABEL);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return l;
     }
 
     private JLabel creerLabel(String text) {
@@ -266,12 +798,13 @@ public class PatientView extends JPanel {
     private JButton creerBouton(String text, Color bg, String iconFile) {
         JButton b = new JButton(text);
         b.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        b.setBackground(b.getBackground());
         b.setBackground(bg);
         b.setForeground(Color.WHITE);
         b.setFocusPainted(false);
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        ImageIcon icon = chargerIconeBouton(iconFile);
+        ImageIcon icon = chargerIcone(iconFile, 14, 14);
         if (icon != null) {
             b.setIcon(icon);
             b.setIconTextGap(5);
@@ -279,15 +812,15 @@ public class PatientView extends JPanel {
         return b;
     }
 
-    private ImageIcon chargerIconeBouton(String nom) {
+    private ImageIcon chargerIcone(String nom, int largeur, int hauteur) {
         try {
             java.net.URL url = getClass().getResource("/resources/icons/" + nom);
             if (url == null) url = getClass().getClassLoader().getResource("resources/icons/" + nom);
-            if (url != null) return new ImageIcon(new ImageIcon(url).getImage().getScaledInstance(14, 14, Image.SCALE_SMOOTH));
+            if (url != null) return new ImageIcon(new ImageIcon(url).getImage().getScaledInstance(largeur, hauteur, Image.SCALE_SMOOTH));
 
             java.io.File dossier = new java.io.File(System.getProperty("user.dir"));
             java.io.File f = scannerFichier(dossier, nom);
-            if (f != null) return new ImageIcon(new ImageIcon(f.getAbsolutePath()).getImage().getScaledInstance(14, 14, Image.SCALE_SMOOTH));
+            if (f != null) return new ImageIcon(new ImageIcon(f.getAbsolutePath()).getImage().getScaledInstance(largeur, hauteur, Image.SCALE_SMOOTH));
         } catch (Exception ignored) {}
         return null;
     }

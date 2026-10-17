@@ -10,10 +10,10 @@ import javax.swing.border.EmptyBorder;
 public class LoginFrame extends JFrame {
 
     // Même charte graphique que MainFrame
-    private static final Color COLOR_PRIMARY      = new Color(194, 24, 91);   // Rose / Magenta principal
-    private static final Color COLOR_PRIMARY_DARK = new Color(136, 14, 79);   // Teinte sombre pour bandeau
-    private static final Color COLOR_BG           = new Color(245, 247, 250); // Fond gris perle épuré
-    private static final Color COLOR_TEXT_LABEL   = new Color(194, 24, 91);   // Couleur des labels de formulaire
+    private static final Color COLOR_PRIMARY      = new Color(194, 24, 91);   
+    private static final Color COLOR_PRIMARY_DARK = new Color(136, 14, 79);   
+    private static final Color COLOR_BG           = new Color(245, 247, 250);
+    private static final Color COLOR_TEXT_LABEL   = new Color(194, 24, 91);  
 
     private JTextField txtUsername;
     private JPasswordField txtPassword;

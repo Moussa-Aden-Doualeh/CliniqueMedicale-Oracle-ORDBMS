@@ -26,6 +26,17 @@ public class FactureDAO {
         }
         return liste;
     }
+    
+    // Calcule automatiquement le prochain N° de facture (ex: 5011 après 5010)
+    public int getNextNumFacture() throws SQLException {
+        String sql = "SELECT NVL(MAX(f.numFacture), 5000) + 1 FROM Factures f";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 5001;
+    }
 
     public void ajouter(int numFacture, double montant, int idPat, int idMed) throws SQLException {
         String sql = "INSERT INTO Factures VALUES (?, SYSDATE, ?, "

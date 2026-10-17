@@ -8,7 +8,7 @@ public class Consultation {
     private String motif;
     private String statut;
     private double tarif;
-    private List<String> medicaments; // Issu du VARRAY medicaments
+    private List<String> medicaments;
 
     public Consultation(int numCons, String dateCons, String motif, String statut, double tarif, List<String> medicaments) {
         this.numCons = numCons;

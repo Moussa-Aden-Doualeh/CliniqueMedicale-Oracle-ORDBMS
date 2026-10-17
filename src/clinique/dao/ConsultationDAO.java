@@ -84,14 +84,15 @@ public class ConsultationDAO {
         }
     }
 
-    // 5. MODIFIER un acte dans la Nested Table
-    public void modifierActe(int idPat, int numCons, String motif, String statut, double tarif, String medicament) throws SQLException {
+    // 5. MODIFIER un acte dans la Nested Table (avec prise en compte de la date)
+    public void modifierActe(int idPat, int numCons, String dateC, String motif, String statut, double tarif, String medicament) throws SQLException {
         String varrayMed = (medicament == null || medicament.trim().isEmpty()) 
                 ? "prescriptions_va()" 
                 : "prescriptions_va('" + medicament.trim().replace("'", "''") + "')";
 
         String sql = "UPDATE TABLE(SELECT p.historique FROM Patients p WHERE p.idPat = " + idPat + ") c "
-                   + "SET c.motif = '" + motif.replace("'", "''") + "', c.statut = '" + statut + "', "
+                   + "SET c.dateCons = TO_DATE('" + dateC + "', 'DD/MM/YYYY'), "
+                   + "c.motif = '" + motif.replace("'", "''") + "', c.statut = '" + statut + "', "
                    + "c.tarif = " + tarif + ", c.medicaments = " + varrayMed + " "
                    + "WHERE c.numCons = " + numCons;
 

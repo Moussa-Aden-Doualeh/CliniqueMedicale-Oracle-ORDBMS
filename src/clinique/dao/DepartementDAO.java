@@ -38,6 +38,17 @@ public class DepartementDAO {
         }
         return list;
     }
+    
+    // Calcule automatiquement le prochain ID département 
+    public int getNextId() throws SQLException {
+        String sql = "SELECT NVL(MAX(d.idDep), 0) + 1 FROM Departements d";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 1;
+    }
 
     public void ajouter(int id, String nom, int etage) throws SQLException {
         String sql = "INSERT INTO Departements VALUES (departement_t(?, ?, ?))";

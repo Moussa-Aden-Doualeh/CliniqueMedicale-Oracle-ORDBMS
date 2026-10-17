@@ -5,7 +5,7 @@ public class Medecin {
     private String nomMed;
     private String specialite;
     private double salaireBase;
-    private String nomDepartement; // Issu de m.dept.nomDep (REF)
+    private String nomDepartement; 
     private String horaires;
     private String email;
 

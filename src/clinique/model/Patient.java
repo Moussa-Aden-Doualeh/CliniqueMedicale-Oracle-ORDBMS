@@ -7,12 +7,12 @@ public class Patient {
     private String nomPat;
     private String dateNaissance;
     private String sexe;
-    private int age; // Issu de p.calculer_age()
+    private int age; 
     private String rue;
     private String ville;
     private int codePostal;
-    private List<String> tels; // Issu du VARRAY(3)
-    private String nomMedecin; // Issu de p.medecinTraitant.nomMed (REF)
+    private List<String> tels; 
+    private String nomMedecin;
 
     public Patient(int idPat, String nomPat, String dateNaissance, String sexe, int age, 
                    String rue, String ville, int codePostal, List<String> tels, String nomMedecin) {

@@ -4,9 +4,9 @@ public class Facture {
     private int numFacture;
     private String dateFacture;
     private double montant;
-    private String nomPatient;       // Issu de f.patientConcerne.nomPat (REF)
-    private String villeFacturation; // Issu de f.patientConcerne.adr.ville (TAD via REF)
-    private String nomMedecin;       // Issu de f.medecinEmetteur.nomMed (REF)
+    private String nomPatient;      
+    private String villeFacturation; 
+    private String nomMedecin;     
 
     public Facture(int numFacture, String dateFacture, double montant, String nomPatient, String villeFacturation, String nomMedecin) {
         this.numFacture = numFacture;

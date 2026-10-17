@@ -7,7 +7,7 @@ import java.util.Properties;
 
 public class DatabaseConnection {
 
-    // L'URL standard d'Oracle (seul l'hôte/port est ici, AUCUN mot de passe !)
+    // L'URL standard d'Oracle 
     private static final String DB_URL = "jdbc:oracle:thin:@localhost:1521:XE";
 
     // Mémorise la session active après validation du formulaire

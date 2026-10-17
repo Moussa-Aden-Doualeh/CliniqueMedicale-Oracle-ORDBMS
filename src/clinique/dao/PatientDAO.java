@@ -42,6 +42,17 @@ public class PatientDAO {
         }
         return list;
     }
+    
+    // Calcule automatiquement le prochain ID patient disponible
+    public int getNextId() throws SQLException {
+        String sql = "SELECT NVL(MAX(p.idPat), 1000) + 1 FROM Patients p";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 1001;
+    }
 
     public Patient getFicheComplete(int idPat) throws SQLException {
         String sql = "SELECT p.idPat, p.nomPat, TO_CHAR(p.dateNaissance, 'DD/MM/YYYY'), p.sexe, p.calculer_age(), "

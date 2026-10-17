@@ -27,6 +27,17 @@ public class MedecinDAO {
         }
         return liste;
     }
+    
+    // Calcule automatiquement le prochain ID médecin disponible (ex: 110 après 100)
+    public int getNextId() throws SQLException {
+        String sql = "SELECT NVL(MAX(m.idMed), 0) + 10 FROM Medecins m";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 10;
+    }
 
     public Vector<ComboItem> getComboItems() throws SQLException {
         Vector<ComboItem> list = new Vector<>();
@@ -56,10 +67,9 @@ public class MedecinDAO {
         return 0.0;
     }
 
-    public void ajouter(int id, String nom, String spec, double salaire, int depId) throws SQLException {
+    public void ajouter(int id, String nom, String spec, double salaire, int depId, String horaires, String email) throws SQLException {
         String sql = "INSERT INTO Medecins VALUES (medecin_t(?, ?, ?, ?, "
-                   + "(SELECT REF(d) FROM Departements d WHERE d.idDep = ?), "
-                   + "'dr." + nom.toLowerCase().replaceAll("[^a-z]", "") + "@clinique.tn', '08h00 - 14h00'))";
+                   + "(SELECT REF(d) FROM Departements d WHERE d.idDep = ?), ?, ?))";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -67,8 +77,9 @@ public class MedecinDAO {
             ps.setString(3, spec);
             ps.setDouble(4, salaire);
             ps.setInt(5, depId);
+            ps.setString(6, email);
+            ps.setString(7, horaires);
             ps.executeUpdate();
-            
         }
     }
     
